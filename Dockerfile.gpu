@@ -1,0 +1,27 @@
+# Full GPU/CUDA Dockerfile — sentence-transformers with CUDA support
+#
+# Use this when you upgrade to a Railway Pro plan (or any host with >4GB image limit).
+# Image size: ~7-8 GB (includes CUDA PyTorch)
+#
+# To switch to this version on Railway:
+#   1. Rename this file to "Dockerfile" (replace the existing one)
+#   2. Push to GitHub — Railway will auto-redeploy with GPU support
+#
+# Benefits over the CPU version (Dockerfile):
+#   - Faster embedding generation (GPU-accelerated)
+#   - Can use larger embedding models
+#   - Lower latency for batch uploads
+
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# Full PyTorch with CUDA — larger image but GPU-accelerated embeddings
+RUN pip install --no-cache-dir torch
+
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY . .
+
+CMD ["python", "run.py"]
