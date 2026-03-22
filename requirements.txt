@@ -1,0 +1,28 @@
+fastapi==0.115.12
+uvicorn[standard]==0.34.0
+python-multipart==0.0.20
+pydantic==2.12.5
+
+# RAG stack
+langchain==1.2.13
+langchain-community==0.3.31
+langchain-huggingface==0.1.2
+langchain-pinecone==0.2.13
+langchain-core==0.3.83
+langchain-text-splitters==0.3.7
+pinecone-client==6.0.0
+groq==1.1.1
+
+# Embeddings
+sentence-transformers==5.3.0
+
+# Document loaders
+pypdf==5.4.0
+
+# Data extraction & export
+pandas==2.2.3
+openpyxl==3.1.5
+
+# Testing
+pytest==9.0.2
+httpx==0.28.1
