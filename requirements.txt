@@ -3,13 +3,11 @@ uvicorn[standard]==0.34.0
 python-multipart==0.0.20
 pydantic==2.12.5
 
-# RAG stack
+# RAG stack — pin top-level only, let pip resolve sub-packages (core, text-splitters)
 langchain==1.2.13
 langchain-community==0.3.31
 langchain-huggingface==0.1.2
 langchain-pinecone==0.2.13
-langchain-core==0.3.83
-langchain-text-splitters==0.3.7
 pinecone-client==6.0.0
 groq==1.1.1
 
