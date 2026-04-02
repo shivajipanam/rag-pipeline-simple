@@ -5,6 +5,7 @@ Run with: pytest tests/ -v
 All external calls (Pinecone, Groq) are mocked — no API keys needed for tests.
 """
 import io
+import zipfile
 import pytest
 from unittest.mock import patch, MagicMock
 from fastapi.testclient import TestClient
@@ -187,7 +188,7 @@ def test_root_serves_html():
     res = client.get("/")
     assert res.status_code == 200
     assert "text/html" in res.headers["content-type"]
-    assert b"ChatSearch" in res.content
+    assert b"Volo AI" in res.content
 
 
 # ── Test 8: /chat errors without uploaded doc ────────────────────────────────
@@ -215,3 +216,169 @@ def test_documents_have_rich_metadata():
 def test_export_without_upload_errors():
     res = client.post("/export", json={"message": "extract sales"})
     assert res.status_code == 400
+
+
+# ── Test 11: /upload accepts a .zip containing a WhatsApp .txt ───────────────
+def test_upload_whatsapp_zip():
+    # Build an in-memory zip containing the sample WhatsApp export
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as zf:
+        zf.writestr("WhatsApp Chat with Akhil.txt", SAMPLE_WA_IOS)
+    zip_bytes = buf.getvalue()
+
+    with patch("app.main.rag.ingest_file", return_value=_mock_ingest()):
+        res = client.post(
+            "/upload",
+            files={"file": ("WhatsApp Chat with Akhil.zip", io.BytesIO(zip_bytes), "application/zip")},
+        )
+    assert res.status_code == 200
+    body = res.json()
+    assert body["doc_id"] == "test-doc-id"
+    assert body["chunks_indexed"] == 3
+
+
+# ── Test 12: /upload rejects a .zip with no .txt inside ─────────────────────
+def test_upload_zip_without_txt_errors():
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as zf:
+        zf.writestr("image.jpg", b"fake image data")
+    zip_bytes = buf.getvalue()
+
+    res = client.post(
+        "/upload",
+        files={"file": ("export.zip", io.BytesIO(zip_bytes), "application/zip")},
+    )
+    assert res.status_code == 422
+    assert ".txt" in res.json()["detail"]
+
+
+# ════════════════════════════════════════════════════════════════════════════
+# Memory-optimisation tests (TDD — written before implementation)
+# ════════════════════════════════════════════════════════════════════════════
+
+# ── Session TTL ──────────────────────────────────────────────────────────────
+def test_session_is_not_expired_initially():
+    from app import session_store
+    session = session_store.create_session()
+    assert session_store.is_expired(session) is False
+
+
+def test_session_is_expired_after_ttl():
+    from app import session_store
+    from datetime import datetime, timedelta, timezone
+    session = session_store.create_session()
+    session.last_active = datetime.now(timezone.utc) - timedelta(hours=session_store.SESSION_TTL_HOURS + 1)
+    assert session_store.is_expired(session) is True
+
+
+def test_touch_resets_expiry():
+    from app import session_store
+    from datetime import datetime, timedelta, timezone
+    session = session_store.create_session()
+    session.last_active = datetime.now(timezone.utc) - timedelta(hours=session_store.SESSION_TTL_HOURS + 1)
+    assert session_store.is_expired(session) is True
+    session_store.touch(session)
+    assert session_store.is_expired(session) is False
+
+
+def test_cleanup_expired_removes_session():
+    from app import session_store
+    from datetime import datetime, timedelta, timezone
+    session = session_store.create_session()
+    sid = session.session_id
+    session.last_active = datetime.now(timezone.utc) - timedelta(hours=session_store.SESSION_TTL_HOURS + 1)
+    removed = session_store.cleanup_expired()
+    assert removed >= 1
+    assert session_store.get_session(sid) is None
+
+
+def test_cleanup_calls_on_expire_callback():
+    from app import session_store
+    from datetime import datetime, timedelta, timezone
+    session = session_store.create_session()
+    session.last_active = datetime.now(timezone.utc) - timedelta(hours=session_store.SESSION_TTL_HOURS + 1)
+    fired = []
+    session_store.cleanup_expired(on_expire=lambda s: fired.append(s.session_id))
+    assert session.session_id in fired
+
+
+def test_cleanup_keeps_active_sessions():
+    from app import session_store
+    session = session_store.create_session()
+    sid = session.session_id
+    session_store.cleanup_expired()
+    assert session_store.get_session(sid) is not None
+
+
+# ── History trim ─────────────────────────────────────────────────────────────
+def test_history_trims_at_max_plus_two():
+    from app import session_store
+    session = session_store.create_session()
+    for i in range(session_store.MAX_HISTORY + 3):
+        session_store.append_message(session, "user", f"msg {i}")
+    assert len(session.history) == session_store.MAX_HISTORY
+
+
+def test_history_no_trim_below_limit():
+    from app import session_store
+    session = session_store.create_session()
+    for i in range(session_store.MAX_HISTORY):
+        session_store.append_message(session, "user", f"msg {i}")
+    assert len(session.history) == session_store.MAX_HISTORY
+
+
+# ── File size cap ────────────────────────────────────────────────────────────
+def test_upload_rejects_oversized_file():
+    import os
+    max_mb = int(os.getenv("MAX_UPLOAD_MB", "5"))
+    big = b"x" * (max_mb * 1024 * 1024 + 1)
+    res = client.post(
+        "/upload",
+        files={"file": ("big.txt", io.BytesIO(big), "text/plain")},
+    )
+    assert res.status_code == 400
+    assert "too large" in res.json()["detail"].lower()
+
+
+# ── Groq client singleton ─────────────────────────────────────────────────────
+def test_groq_client_is_singleton():
+    import app.rag as rag_module
+    with patch("app.rag.Groq") as mock_groq:
+        mock_groq.return_value = MagicMock()
+        old = rag_module._groq_client
+        rag_module._groq_client = None
+        try:
+            c1 = rag_module.get_groq_client()
+            c2 = rag_module.get_groq_client()
+            assert c1 is c2
+            assert mock_groq.call_count == 1
+        finally:
+            rag_module._groq_client = old
+
+
+# ── Vectorstore cache ─────────────────────────────────────────────────────────
+def test_vectorstore_cache_returns_same_instance():
+    import app.rag as rag_module
+    ns = "test-ns-cache-singleton"
+    with patch("app.rag.PineconeVectorStore") as mock_vs:
+        mock_vs.return_value = MagicMock()
+        rag_module.evict_vectorstore(ns)
+        vs1 = rag_module.get_vectorstore(ns)
+        vs2 = rag_module.get_vectorstore(ns)
+        assert vs1 is vs2
+        assert mock_vs.call_count == 1
+        rag_module.evict_vectorstore(ns)
+
+
+def test_vectorstore_eviction_forces_new_instance():
+    import app.rag as rag_module
+    ns = "test-ns-evict-new"
+    with patch("app.rag.PineconeVectorStore") as mock_vs:
+        mock_vs.side_effect = [MagicMock(), MagicMock()]
+        rag_module.evict_vectorstore(ns)
+        vs1 = rag_module.get_vectorstore(ns)
+        rag_module.evict_vectorstore(ns)
+        vs2 = rag_module.get_vectorstore(ns)
+        assert vs1 is not vs2
+        assert mock_vs.call_count == 2
+        rag_module.evict_vectorstore(ns)

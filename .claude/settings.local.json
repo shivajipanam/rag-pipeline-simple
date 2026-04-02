@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python -m pytest tests/test_api.py::test_groq_client_is_singleton tests/test_api.py::test_root_serves_html -v)",
+      "Bash(python -m pytest tests/ -v)"
+    ]
+  }
+}

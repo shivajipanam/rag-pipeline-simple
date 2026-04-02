@@ -3,159 +3,703 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>ChatSearch — Ask Your WhatsApp Chats</title>
+  <title>Volo AI — Ask Your Business Chats</title>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
+    /* ── Design tokens ──────────────────────────────────────────────────────── */
     :root {
-      --bg: #0d0d0d;
-      --surface: #161616;
-      --surface2: #1e1e1e;
-      --border: #2a2a2a;
-      --accent: #4f46e5;
-      --accent-hover: #4338ca;
-      --accent-soft: #1e1b4b;
-      --green: #22c55e;
-      --red: #ef4444;
-      --text: #e5e5e5;
-      --muted: #6b6b6b;
-      --user-bubble: #1e1b4b;
-      --ai-bubble: #1a1a1a;
+      --bg:               #0d0a27;
+      --bg-low:           #120f2f;
+      --surface:          #181538;
+      --surface-2:        #1e1a41;
+      --surface-3:        #24204a;
+      --primary:          #69f1f1;
+      --primary-dim:      #58e2e2;
+      --primary-deep:     #01b6b6;
+      --tertiary:         #6cbdff;
+      --on-surface:       #e7e2ff;
+      --muted:            #aca7cc;
+      --outline:          rgba(71, 68, 100, 0.25);
+      --outline-solid:    #474464;
+      --error:            #ff716c;
+      --green:            #3ecfcf;
+      --user-bubble:      rgba(105, 241, 241, 0.08);
+      --ai-bubble:        #181538;
+      --font-head:        'Space Grotesk', sans-serif;
+      --font-body:        'Inter', sans-serif;
     }
+
+    html { scroll-behavior: smooth; }
 
     body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      font-family: var(--font-body);
       background: var(--bg);
-      color: var(--text);
+      color: var(--on-surface);
       min-height: 100vh;
       font-size: 15px;
+      overflow-x: hidden;
     }
 
-    /* ═══════════════════════════════════════════
-       LANDING
-    ═══════════════════════════════════════════ */
-    #landing {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      min-height: 100vh;
-      padding: 3rem 1.5rem;
-      text-align: center;
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+      vertical-align: middle;
     }
 
-    .tag {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.4rem;
-      background: var(--accent-soft);
-      border: 1px solid var(--accent);
-      color: #a5b4fc;
-      font-size: 0.72rem;
-      font-weight: 600;
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-      padding: 0.3rem 0.85rem;
-      border-radius: 99px;
-      margin-bottom: 1.8rem;
+    /* ── Utility ────────────────────────────────────────────────────────────── */
+    .glass {
+      background: rgba(36, 32, 74, 0.45);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border-top: 1px solid rgba(105, 241, 241, 0.08);
     }
-
-    h1 {
-      font-size: clamp(2.2rem, 6vw, 4rem);
-      font-weight: 800;
-      line-height: 1.1;
-      letter-spacing: -0.03em;
-      margin-bottom: 1.2rem;
-      background: linear-gradient(135deg, #fff 30%, #818cf8 100%);
+    .grad-text {
+      background: linear-gradient(135deg, var(--on-surface) 20%, var(--primary) 100%);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
       background-clip: text;
     }
+    .grad-btn {
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-deep) 100%);
+      color: #003d42;
+      font-weight: 700;
+      border: none;
+      cursor: pointer;
+      transition: transform 0.15s, box-shadow 0.15s;
+    }
+    .grad-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 28px rgba(105,241,241,0.28); }
+    .grad-btn:active { transform: scale(0.97); }
 
-    .subtitle {
-      font-size: 1.05rem;
+    /* ── Scroll-reveal ──────────────────────────────────────────────────────── */
+    .reveal {
+      opacity: 0;
+      transform: translateY(22px);
+      transition: opacity 0.55s ease, transform 0.55s ease;
+    }
+    .reveal.visible { opacity: 1; transform: translateY(0); }
+
+    /* ══════════════════════════════════════════════════════════════════════════
+       LANDING
+    ══════════════════════════════════════════════════════════════════════════ */
+    #landing { display: block; }
+    #landing.hidden { display: none; }
+
+    /* ── Navbar ─────────────────────────────────────────────────────────────── */
+    .navbar {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 100;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0 2.5rem;
+      height: 68px;
+      background: rgba(0, 0, 0, 0.78);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+      transition: background 0.3s;
+    }
+    .navbar-brand {
+      display: flex;
+      align-items: center;
+      gap: 0.65rem;
+      text-decoration: none;
+    }
+    .navbar-brand img {
+      height: 36px;
+      width: auto;
+      border-radius: 8px;
+      object-fit: contain;
+    }
+    .navbar-brand span {
+      font-family: var(--font-head);
+      font-size: 1.35rem;
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      color: var(--primary);
+    }
+    .navbar-links {
+      display: flex;
+      gap: 2.2rem;
+      list-style: none;
+    }
+    .navbar-links a {
+      font-family: var(--font-head);
+      font-size: 0.9rem;
+      font-weight: 500;
       color: var(--muted);
-      max-width: 520px;
-      line-height: 1.7;
+      text-decoration: none;
+      letter-spacing: -0.01em;
+      transition: color 0.2s;
+    }
+    .navbar-links a:hover { color: var(--primary); }
+    .navbar-cta {
+      padding: 0.6rem 1.6rem;
+      border-radius: 99px;
+      font-size: 0.9rem;
+      font-family: var(--font-head);
+      font-weight: 700;
+    }
+    @media (max-width: 768px) {
+      .navbar-links { display: none; }
+      .navbar { padding: 0 1.25rem; }
+    }
+
+    /* ── Hero ───────────────────────────────────────────────────────────────── */
+    .hero {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      padding: 7rem 2.5rem 5rem;
+      position: relative;
+      overflow: hidden;
+    }
+    .hero-orb-1 {
+      position: absolute;
+      top: -120px; right: -80px;
+      width: 560px; height: 560px;
+      background: radial-gradient(circle, rgba(105,241,241,0.07) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .hero-orb-2 {
+      position: absolute;
+      bottom: -100px; left: -60px;
+      width: 400px; height: 400px;
+      background: radial-gradient(circle, rgba(108,189,255,0.06) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .hero-inner {
+      max-width: 1200px;
+      margin: 0 auto;
+      width: 100%;
+    }
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: var(--surface-3);
+      border: 1px solid var(--outline);
+      color: var(--primary);
+      font-size: 0.68rem;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      padding: 0.35rem 1rem;
+      border-radius: 99px;
+      margin-bottom: 1.8rem;
+    }
+    .hero-badge .ping {
+      position: relative;
+      width: 8px; height: 8px;
+    }
+    .hero-badge .ping::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: var(--primary);
+      border-radius: 50%;
+      animation: ping 1.4s ease-in-out infinite;
+    }
+    .hero-badge .ping::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: var(--primary);
+      border-radius: 50%;
+    }
+    @keyframes ping {
+      0%, 100% { transform: scale(1); opacity: 0.7; }
+      50% { transform: scale(2.2); opacity: 0; }
+    }
+    .hero h1 {
+      font-family: var(--font-head);
+      font-size: clamp(3rem, 7vw, 5.5rem);
+      font-weight: 700;
+      line-height: 1.06;
+      letter-spacing: -0.03em;
+      margin-bottom: 1.4rem;
+      max-width: 780px;
+    }
+    .hero-sub {
+      font-size: 1.12rem;
+      color: var(--muted);
+      max-width: 540px;
+      line-height: 1.75;
       margin-bottom: 2.8rem;
     }
-
-    .cta-row { display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; }
-
-    .btn-cta {
-      background: var(--accent);
-      color: #fff;
-      border: none;
-      padding: 0.9rem 2.4rem;
-      font-size: 1rem;
-      font-weight: 700;
-      border-radius: 10px;
-      cursor: pointer;
-      transition: background 0.2s, transform 0.1s, box-shadow 0.2s;
-      box-shadow: 0 0 24px #4f46e540;
-    }
-    .btn-cta:hover { background: var(--accent-hover); transform: translateY(-2px); box-shadow: 0 0 36px #4f46e560; }
-
-    .btn-ghost {
-      background: transparent;
-      color: var(--muted);
-      border: 1px solid var(--border);
-      padding: 0.9rem 2rem;
-      font-size: 1rem;
-      font-weight: 600;
-      border-radius: 10px;
-      cursor: pointer;
-      transition: border-color 0.2s, color 0.2s;
-    }
-    .btn-ghost:hover { border-color: #555; color: var(--text); }
-
-    .use-cases {
+    .hero-actions {
       display: flex;
       gap: 1rem;
-      margin-top: 3.5rem;
       flex-wrap: wrap;
+    }
+    .btn-hero-primary {
+      padding: 1rem 2.4rem;
+      border-radius: 99px;
+      font-size: 1rem;
+      font-family: var(--font-head);
+    }
+    .btn-hero-ghost {
+      padding: 1rem 2.2rem;
+      border-radius: 99px;
+      font-size: 1rem;
+      font-family: var(--font-head);
+      font-weight: 600;
+      background: var(--surface-2);
+      color: var(--on-surface);
+      border: 1px solid var(--outline);
+      cursor: pointer;
+      transition: background 0.2s, border-color 0.2s;
+    }
+    .btn-hero-ghost:hover { background: var(--surface-3); border-color: rgba(105,241,241,0.2); }
+
+    /* ── Platform section ───────────────────────────────────────────────────── */
+    .platform-section {
+      padding: 7rem 2.5rem;
+    }
+    .section-inner {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    .section-label {
+      font-size: 0.68rem;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--primary);
+      margin-bottom: 1rem;
+    }
+    .section-title {
+      font-family: var(--font-head);
+      font-size: clamp(2rem, 4vw, 3rem);
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      line-height: 1.15;
+      margin-bottom: 1.2rem;
+      max-width: 700px;
+    }
+    .section-sub {
+      color: var(--muted);
+      max-width: 560px;
+      line-height: 1.75;
+      margin-bottom: 3.5rem;
+    }
+    .platform-cards {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1.5rem;
+      margin-bottom: 4rem;
+    }
+    .platform-card {
+      background: var(--surface);
+      border: 1px solid var(--outline);
+      border-radius: 18px;
+      padding: 2rem;
+      transition: transform 0.25s, border-color 0.25s, box-shadow 0.25s;
+    }
+    .platform-card:hover {
+      transform: translateY(-5px);
+      border-color: rgba(105,241,241,0.18);
+      box-shadow: 0 16px 48px rgba(0,0,0,0.35);
+    }
+    .platform-icon {
+      width: 52px; height: 52px;
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
       justify-content: center;
+      font-size: 1.65rem;
+      margin-bottom: 1.4rem;
+    }
+    .platform-num {
+      font-family: var(--font-head);
+      font-size: 2.6rem;
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      color: var(--primary);
+      margin-bottom: 0.4rem;
+    }
+    .platform-card-title {
+      font-family: var(--font-head);
+      font-size: 1rem;
+      font-weight: 600;
+      margin-bottom: 0.55rem;
+    }
+    .platform-card-desc {
+      font-size: 0.85rem;
+      color: var(--muted);
+      line-height: 1.65;
+    }
+    /* Flow diagram */
+    .flow-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+    }
+    .flow-step {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      background: var(--surface);
+      border: 1px solid var(--outline);
+      border-radius: 12px;
+      padding: 0.9rem 1.4rem;
+    }
+    .flow-step-icon {
+      font-size: 1.5rem;
+    }
+    .flow-step-text {
+      font-family: var(--font-head);
+      font-size: 0.85rem;
+      font-weight: 600;
+    }
+    .flow-arrow {
+      color: var(--primary);
+      font-size: 1.2rem;
+      opacity: 0.6;
+    }
+    @media (max-width: 900px) {
+      .platform-cards { grid-template-columns: 1fr; }
     }
 
-    .use-case {
+    /* ── How it works ───────────────────────────────────────────────────────── */
+    .how-section {
+      padding: 7rem 2.5rem;
+      background: var(--bg-low);
+    }
+    .steps-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 2rem;
+      position: relative;
+    }
+    .steps-grid::before {
+      content: '';
+      position: absolute;
+      top: 28px; left: calc(16.66% + 1rem); right: calc(16.66% + 1rem);
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--primary), transparent);
+      opacity: 0.25;
+    }
+    .step-card {
       background: var(--surface);
-      border: 1px solid var(--border);
+      border: 1px solid var(--outline);
+      border-radius: 18px;
+      padding: 2rem;
+    }
+    .step-num {
+      width: 44px; height: 44px;
       border-radius: 12px;
-      padding: 1rem 1.2rem;
-      max-width: 200px;
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-deep) 100%);
+      color: #003d42;
+      font-family: var(--font-head);
+      font-size: 1.1rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 1.4rem;
+    }
+    .step-title {
+      font-family: var(--font-head);
+      font-size: 1.1rem;
+      font-weight: 700;
+      margin-bottom: 0.55rem;
+    }
+    .step-desc {
+      font-size: 0.85rem;
+      color: var(--muted);
+      line-height: 1.65;
+    }
+    @media (max-width: 900px) {
+      .steps-grid { grid-template-columns: 1fr; }
+      .steps-grid::before { display: none; }
+    }
+
+    /* ── Pricing ────────────────────────────────────────────────────────────── */
+    .pricing-section {
+      padding: 7rem 2.5rem;
+    }
+    .pricing-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1.5rem;
+      align-items: start;
+    }
+    .pricing-card {
+      background: var(--surface);
+      border: 1px solid var(--outline);
+      border-radius: 20px;
+      padding: 2.2rem;
+      display: flex;
+      flex-direction: column;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .pricing-card:hover { transform: translateY(-4px); box-shadow: 0 20px 52px rgba(0,0,0,0.4); }
+    .pricing-card.featured {
+      border-color: rgba(105, 241, 241, 0.3);
+      background: var(--surface-2);
+      transform: translateY(-8px);
+      box-shadow: 0 0 0 1px rgba(105,241,241,0.12), 0 24px 60px rgba(0,0,0,0.45);
+      position: relative;
+    }
+    .pricing-card.featured:hover { transform: translateY(-12px); }
+    .pricing-badge {
+      position: absolute;
+      top: -14px; left: 50%; transform: translateX(-50%);
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-deep) 100%);
+      color: #003d42;
+      font-size: 0.68rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      padding: 0.3rem 1rem;
+      border-radius: 99px;
+      white-space: nowrap;
+    }
+    .pricing-tier {
+      font-size: 0.68rem;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 1rem;
+    }
+    .pricing-card.featured .pricing-tier { color: var(--primary); }
+    .pricing-price {
+      font-family: var(--font-head);
+      font-size: 3rem;
+      font-weight: 700;
+      letter-spacing: -0.04em;
+      line-height: 1;
+      margin-bottom: 0.3rem;
+    }
+    .pricing-price span {
+      font-size: 1rem;
+      font-weight: 400;
+      color: var(--muted);
+      letter-spacing: 0;
+    }
+    .pricing-tagline {
+      font-size: 0.82rem;
+      color: var(--muted);
+      margin-bottom: 1.8rem;
+      line-height: 1.5;
+    }
+    .pricing-divider {
+      height: 1px;
+      background: var(--outline);
+      margin-bottom: 1.8rem;
+    }
+    .pricing-features {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 0.85rem;
+      margin-bottom: 2rem;
+      flex: 1;
+    }
+    .pricing-features li {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.65rem;
+      font-size: 0.85rem;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+    .pricing-card.featured .pricing-features li { color: var(--on-surface); }
+    .pricing-features li .material-symbols-outlined {
+      font-size: 1rem;
+      color: var(--primary);
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+    .pricing-cta {
+      width: 100%;
+      padding: 0.85rem;
+      border-radius: 99px;
+      font-size: 0.9rem;
+      font-family: var(--font-head);
+      font-weight: 700;
+    }
+    .pricing-cta-ghost {
+      background: transparent;
+      color: var(--on-surface);
+      border: 1px solid var(--outline-solid);
+      cursor: pointer;
+      transition: border-color 0.2s, background 0.2s;
+    }
+    .pricing-cta-ghost:hover { border-color: var(--primary); background: rgba(105,241,241,0.04); }
+    @media (max-width: 900px) {
+      .pricing-grid { grid-template-columns: 1fr; }
+      .pricing-card.featured { transform: translateY(0); }
+    }
+
+    /* ── Contact ────────────────────────────────────────────────────────────── */
+    .contact-section {
+      padding: 7rem 2.5rem;
+      background: var(--bg-low);
+    }
+    .contact-form {
+      display: flex;
+      flex-direction: column;
+      gap: 1.2rem;
+    }
+    .contact-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.2rem;
+    }
+    .contact-field {
+      display: flex;
+      flex-direction: column;
+      gap: 0.45rem;
       text-align: left;
     }
-    .use-case .uc-icon { font-size: 1.5rem; margin-bottom: 0.5rem; }
-    .use-case .uc-title { font-size: 0.82rem; font-weight: 700; color: #ccc; margin-bottom: 0.3rem; }
-    .use-case .uc-desc { font-size: 0.75rem; color: var(--muted); line-height: 1.5; }
+    .contact-label {
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+    .contact-input,
+    .contact-textarea {
+      background: var(--surface);
+      border: 1px solid var(--outline);
+      border-radius: 10px;
+      color: var(--on-surface);
+      padding: 0.75rem 1rem;
+      font-size: 0.92rem;
+      font-family: var(--font-body);
+      outline: none;
+      transition: border-color 0.2s;
+      width: 100%;
+    }
+    .contact-input::placeholder,
+    .contact-textarea::placeholder { color: var(--muted); }
+    .contact-input:focus,
+    .contact-textarea:focus { border-color: rgba(105,241,241,0.4); }
+    .contact-textarea { resize: vertical; min-height: 110px; }
+    .contact-submit {
+      padding: 1rem 2.8rem;
+      border-radius: 99px;
+      font-size: 1rem;
+      font-family: var(--font-head);
+      align-self: center;
+      margin-top: 0.5rem;
+    }
+    .contact-status {
+      font-size: 0.85rem;
+      min-height: 1.2em;
+      text-align: center;
+    }
+    .contact-status.ok  { color: var(--green); }
+    .contact-status.err { color: var(--error); }
+    @media (max-width: 600px) {
+      .contact-row { grid-template-columns: 1fr; }
+    }
 
-    /* ═══════════════════════════════════════════
+    /* ── Footer ─────────────────────────────────────────────────────────────── */
+    .footer {
+      background: #000000;
+      border-top: 1px solid rgba(255,255,255,0.08);
+      padding: 3rem 2.5rem;
+    }
+    .footer-inner {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 1.5rem;
+    }
+    .footer-brand {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+    }
+    .footer-brand img {
+      height: 28px;
+      width: auto;
+      object-fit: contain;
+    }
+    .footer-brand span {
+      font-family: var(--font-head);
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--primary);
+    }
+    .footer-copy {
+      font-size: 0.75rem;
+      color: var(--muted);
+      opacity: 0.6;
+      margin-top: 0.3rem;
+    }
+    .footer-links {
+      display: flex;
+      gap: 2rem;
+      flex-wrap: wrap;
+    }
+    .footer-links a {
+      font-size: 0.85rem;
+      color: var(--muted);
+      text-decoration: none;
+      transition: color 0.2s;
+      opacity: 0.75;
+    }
+    .footer-links a:hover { color: var(--primary); opacity: 1; }
+
+    /* ══════════════════════════════════════════════════════════════════════════
        APP SHELL
-    ═══════════════════════════════════════════ */
+    ══════════════════════════════════════════════════════════════════════════ */
     #app {
       display: none;
       height: 100vh;
       flex-direction: column;
     }
 
-    /* Top bar */
+    /* Topbar */
     .topbar {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 0.75rem 1.25rem;
+      padding: 0.75rem 1.5rem;
       background: var(--surface);
-      border-bottom: 1px solid var(--border);
+      border-bottom: 1px solid var(--outline);
       flex-shrink: 0;
       gap: 1rem;
     }
     .topbar-left { display: flex; align-items: center; gap: 0.75rem; }
-    .topbar-logo { font-size: 1rem; font-weight: 800; color: #a5b4fc; }
+    .topbar-brand {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      text-decoration: none;
+    }
+    .topbar-brand img {
+      height: 28px;
+      width: auto;
+      border-radius: 6px;
+      object-fit: contain;
+    }
+    .topbar-logo {
+      font-family: var(--font-head);
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: var(--primary);
+    }
     .topbar-file {
       font-size: 0.78rem;
       color: var(--muted);
-      background: var(--surface2);
-      border: 1px solid var(--border);
+      background: var(--surface-2);
+      border: 1px solid var(--outline);
       padding: 0.25rem 0.7rem;
       border-radius: 6px;
       max-width: 200px;
@@ -166,23 +710,24 @@
     .topbar-right { display: flex; align-items: center; gap: 0.6rem; }
 
     .btn-sm {
-      font-size: 0.8rem;
+      font-size: 0.78rem;
       font-weight: 600;
+      font-family: var(--font-body);
       border-radius: 7px;
       padding: 0.4rem 0.9rem;
       cursor: pointer;
-      border: 1px solid var(--border);
-      background: var(--surface2);
+      border: 1px solid var(--outline);
+      background: var(--surface-2);
       color: var(--muted);
       transition: color 0.15s, border-color 0.15s, background 0.15s;
       white-space: nowrap;
     }
-    .btn-sm:hover { color: var(--text); border-color: #555; }
-    .btn-sm.accent { background: var(--accent-soft); border-color: var(--accent); color: #a5b4fc; }
-    .btn-sm.accent:hover { background: #2e2a6a; }
-    .btn-sm.danger:hover { border-color: var(--red); color: var(--red); }
+    .btn-sm:hover { color: var(--on-surface); border-color: rgba(105,241,241,0.2); }
+    .btn-sm.accent { background: rgba(105,241,241,0.07); border-color: rgba(105,241,241,0.25); color: var(--primary); }
+    .btn-sm.accent:hover { background: rgba(105,241,241,0.12); }
+    .btn-sm.danger:hover { border-color: var(--error); color: var(--error); }
 
-    /* Upload panel (visible before a file is loaded) */
+    /* Upload panel */
     #upload-panel {
       flex: 1;
       display: flex;
@@ -190,47 +735,55 @@
       justify-content: center;
       padding: 2rem;
     }
-
     .upload-card {
       background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 16px;
+      border: 1px solid var(--outline);
+      border-radius: 20px;
       padding: 2.5rem 2rem;
-      max-width: 460px;
+      max-width: 480px;
       width: 100%;
       text-align: center;
     }
-    .upload-card h2 { font-size: 1.3rem; font-weight: 700; margin-bottom: 0.5rem; }
+    .upload-card h2 {
+      font-family: var(--font-head);
+      font-size: 1.3rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+    }
     .upload-card p { font-size: 0.88rem; color: var(--muted); margin-bottom: 1.5rem; line-height: 1.6; }
 
     .drop-zone {
-      border: 2px dashed var(--border);
-      border-radius: 10px;
+      border: 2px dashed var(--outline-solid);
+      border-radius: 12px;
       padding: 2rem 1.5rem;
       cursor: pointer;
       transition: border-color 0.2s, background 0.2s;
       margin-bottom: 1rem;
     }
-    .drop-zone:hover, .drop-zone.dragover { border-color: var(--accent); background: #1a1730; }
+    .drop-zone:hover, .drop-zone.dragover {
+      border-color: var(--primary);
+      background: rgba(105,241,241,0.04);
+    }
     .drop-zone input { display: none; }
     .drop-zone .dz-icon { font-size: 2.2rem; margin-bottom: 0.5rem; }
     .drop-zone .dz-label { font-size: 0.88rem; color: var(--muted); }
-    .drop-zone .dz-filename { font-size: 0.85rem; color: #a5b4fc; margin-top: 0.5rem; font-weight: 600; }
+    .drop-zone .dz-filename { font-size: 0.85rem; color: var(--primary); margin-top: 0.5rem; font-weight: 600; }
 
     .btn-upload {
       width: 100%;
-      background: var(--accent);
-      color: #fff;
-      border: none;
-      padding: 0.8rem;
+      padding: 0.85rem;
       font-size: 0.95rem;
       font-weight: 700;
-      border-radius: 8px;
+      font-family: var(--font-head);
+      border-radius: 99px;
+      border: none;
       cursor: pointer;
-      transition: background 0.2s;
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-deep) 100%);
+      color: #003d42;
+      transition: opacity 0.2s, transform 0.15s;
     }
-    .btn-upload:hover { background: var(--accent-hover); }
-    .btn-upload:disabled { opacity: 0.4; cursor: not-allowed; }
+    .btn-upload:hover:not(:disabled) { transform: translateY(-1px); }
+    .btn-upload:disabled { opacity: 0.35; cursor: not-allowed; }
 
     .upload-status {
       margin-top: 0.85rem;
@@ -239,7 +792,7 @@
       line-height: 1.5;
     }
     .upload-status.ok { color: var(--green); }
-    .upload-status.err { color: var(--red); }
+    .upload-status.err { color: var(--error); }
     .upload-status.info { color: var(--muted); }
 
     .stat-grid {
@@ -249,62 +802,55 @@
       margin-top: 0.9rem;
       text-align: left;
     }
-    .stat-item { background: var(--surface2); border-radius: 8px; padding: 0.6rem 0.8rem; }
-    .stat-label { font-size: 0.68rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
-    .stat-value { font-size: 0.88rem; font-weight: 600; color: var(--text); margin-top: 0.1rem; }
-
-    /* Chat area */
-    #chat-panel {
-      display: none;
-      flex: 1;
-      flex-direction: column;
-      overflow: hidden;
+    .stat-item {
+      background: var(--surface-2);
+      border-radius: 10px;
+      padding: 0.65rem 0.85rem;
     }
+    .stat-label { font-size: 0.68rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
+    .stat-value { font-size: 0.88rem; font-weight: 600; color: var(--on-surface); margin-top: 0.1rem; }
+
+    /* Chat panel */
+    #chat-panel { display: none; flex: 1; flex-direction: column; overflow: hidden; }
 
     #messages {
       flex: 1;
       overflow-y: auto;
-      padding: 1.5rem 1.25rem;
+      padding: 1.5rem 1.5rem;
       display: flex;
       flex-direction: column;
       gap: 1.25rem;
       scroll-behavior: smooth;
     }
-
-    /* Scrollbar */
     #messages::-webkit-scrollbar { width: 5px; }
     #messages::-webkit-scrollbar-track { background: transparent; }
-    #messages::-webkit-scrollbar-thumb { background: #333; border-radius: 99px; }
+    #messages::-webkit-scrollbar-thumb { background: var(--surface-3); border-radius: 99px; }
 
-    .msg-row {
-      display: flex;
-      flex-direction: column;
-      max-width: 78%;
-    }
+    .msg-row { display: flex; flex-direction: column; max-width: 78%; }
     .msg-row.user { align-self: flex-end; align-items: flex-end; }
     .msg-row.ai   { align-self: flex-start; align-items: flex-start; }
 
     .msg-label { font-size: 0.7rem; color: var(--muted); margin-bottom: 0.3rem; padding: 0 0.25rem; }
 
     .bubble {
-      padding: 0.75rem 1rem;
-      border-radius: 14px;
+      padding: 0.8rem 1.1rem;
+      border-radius: 16px;
       font-size: 0.92rem;
       line-height: 1.65;
       white-space: pre-wrap;
       word-break: break-word;
     }
     .msg-row.user .bubble {
-      background: var(--user-bubble);
-      border: 1px solid #3730a3;
+      background: rgba(105,241,241,0.1);
+      border: 1px solid rgba(105,241,241,0.2);
       border-bottom-right-radius: 4px;
-      color: #c7d2fe;
+      color: var(--on-surface);
     }
     .msg-row.ai .bubble {
       background: var(--ai-bubble);
-      border: 1px solid var(--border);
+      border: 1px solid var(--outline);
       border-bottom-left-radius: 4px;
-      color: var(--text);
+      color: var(--on-surface);
     }
 
     /* Typing indicator */
@@ -334,50 +880,41 @@
       gap: 0.3rem;
       user-select: none;
     }
-    .sources-toggle:hover { border-color: var(--border); color: #aaa; }
+    .sources-toggle:hover { border-color: var(--outline); color: #aaa; }
     .sources-toggle .arrow { transition: transform 0.2s; }
     .sources-toggle.open .arrow { transform: rotate(90deg); }
-
-    .sources-list {
-      display: none;
-      flex-direction: column;
-      gap: 0.4rem;
-      margin-top: 0.4rem;
-      max-width: 100%;
-    }
+    .sources-list { display: none; flex-direction: column; gap: 0.4rem; margin-top: 0.4rem; max-width: 100%; }
     .sources-list.visible { display: flex; }
-
     .source-card {
-      background: var(--surface2);
-      border: 1px solid var(--border);
-      border-left: 3px solid var(--accent);
+      background: var(--surface-2);
+      border: 1px solid var(--outline);
+      border-left: 3px solid var(--primary);
       border-radius: 8px;
       padding: 0.6rem 0.8rem;
       font-size: 0.78rem;
     }
-    .source-meta { color: #818cf8; font-weight: 600; margin-bottom: 0.3rem; }
+    .source-meta { color: var(--primary); font-weight: 600; margin-bottom: 0.3rem; }
     .source-snippet { color: var(--muted); line-height: 1.5; white-space: pre-wrap; }
 
     /* Input bar */
     .input-bar {
-      padding: 0.9rem 1.25rem;
+      padding: 0.9rem 1.5rem;
       background: var(--surface);
-      border-top: 1px solid var(--border);
+      border-top: 1px solid var(--outline);
       display: flex;
       gap: 0.6rem;
       align-items: flex-end;
       flex-shrink: 0;
     }
-
     #msgInput {
       flex: 1;
-      background: var(--surface2);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      color: var(--text);
+      background: var(--surface-2);
+      border: 1px solid var(--outline);
+      border-radius: 12px;
+      color: var(--on-surface);
       padding: 0.65rem 1rem;
       font-size: 0.93rem;
-      font-family: inherit;
+      font-family: var(--font-body);
       resize: none;
       outline: none;
       max-height: 140px;
@@ -385,102 +922,231 @@
       line-height: 1.5;
       transition: border-color 0.2s;
     }
-    #msgInput:focus { border-color: var(--accent); }
+    #msgInput::placeholder { color: var(--muted); }
+    #msgInput:focus { border-color: rgba(105,241,241,0.4); }
 
     .btn-send {
-      background: var(--accent);
-      color: #fff;
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-deep) 100%);
+      color: #003d42;
       border: none;
-      border-radius: 10px;
-      width: 42px;
-      height: 42px;
+      border-radius: 12px;
+      width: 44px; height: 44px;
       display: flex;
       align-items: center;
       justify-content: center;
       cursor: pointer;
       flex-shrink: 0;
-      transition: background 0.2s;
+      transition: opacity 0.2s, transform 0.15s;
     }
-    .btn-send:hover { background: var(--accent-hover); }
-    .btn-send:disabled { opacity: 0.4; cursor: not-allowed; }
-    .btn-send svg { width: 18px; height: 18px; fill: none; stroke: #fff; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .btn-send:hover:not(:disabled) { transform: scale(1.06); }
+    .btn-send:disabled { opacity: 0.35; cursor: not-allowed; }
+    .btn-send svg { width: 18px; height: 18px; fill: none; stroke: #003d42; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
 
-    /* Export panel */
-    #export-panel {
+    /* Suggestions */
+    .suggestions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      padding: 0 1.5rem 0.75rem;
+    }
+    .suggestion-chip {
+      background: var(--surface-2);
+      border: 1px solid var(--outline);
+      color: var(--muted);
+      font-size: 0.78rem;
+      padding: 0.35rem 0.85rem;
+      border-radius: 99px;
+      cursor: pointer;
+      transition: border-color 0.15s, color 0.15s;
+    }
+    .suggestion-chip:hover { border-color: rgba(105,241,241,0.3); color: var(--primary); }
+
+    /* ══════════════════════════════════════════════════════════════════════════
+       MODALS (Export + Paywall)
+    ══════════════════════════════════════════════════════════════════════════ */
+    .modal-overlay {
       position: fixed;
       inset: 0;
-      background: #000a;
+      background: rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(4px);
       display: none;
       align-items: center;
       justify-content: center;
-      z-index: 100;
+      z-index: 200;
       padding: 1.5rem;
     }
-    #export-panel.visible { display: flex; }
+    .modal-overlay.visible { display: flex; }
 
+    /* Export modal */
     .export-card {
       background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 16px;
+      border: 1px solid var(--outline);
+      border-radius: 20px;
       padding: 2rem;
       max-width: 440px;
       width: 100%;
     }
-    .export-card h3 { font-size: 1.1rem; font-weight: 700; margin-bottom: 0.4rem; }
+    .export-card h3 {
+      font-family: var(--font-head);
+      font-size: 1.1rem;
+      font-weight: 700;
+      margin-bottom: 0.4rem;
+    }
     .export-card p { font-size: 0.85rem; color: var(--muted); margin-bottom: 1.2rem; line-height: 1.5; }
 
     #exportQuery {
       width: 100%;
-      background: var(--surface2);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      color: var(--text);
+      background: var(--surface-2);
+      border: 1px solid var(--outline);
+      border-radius: 10px;
+      color: var(--on-surface);
       padding: 0.7rem 1rem;
       font-size: 0.9rem;
-      font-family: inherit;
+      font-family: var(--font-body);
       resize: vertical;
       min-height: 70px;
       outline: none;
       transition: border-color 0.2s;
       margin-bottom: 1rem;
     }
-    #exportQuery:focus { border-color: var(--accent); }
+    #exportQuery::placeholder { color: var(--muted); }
+    #exportQuery:focus { border-color: rgba(105,241,241,0.4); }
 
     .export-actions { display: flex; gap: 0.7rem; }
     .btn-export {
       flex: 1;
       background: var(--green);
-      color: #000;
+      color: #003d42;
       border: none;
       padding: 0.75rem;
       font-size: 0.92rem;
       font-weight: 700;
-      border-radius: 8px;
+      font-family: var(--font-head);
+      border-radius: 99px;
       cursor: pointer;
       transition: opacity 0.2s;
     }
-    .btn-export:hover { opacity: 0.88; }
-    .btn-export:disabled { opacity: 0.4; cursor: not-allowed; }
+    .btn-export:hover:not(:disabled) { opacity: 0.88; }
+    .btn-export:disabled { opacity: 0.35; cursor: not-allowed; }
     .btn-cancel {
-      background: var(--surface2);
+      background: var(--surface-2);
       color: var(--muted);
-      border: 1px solid var(--border);
+      border: 1px solid var(--outline);
       padding: 0.75rem 1.2rem;
       font-size: 0.92rem;
       font-weight: 600;
-      border-radius: 8px;
+      border-radius: 99px;
       cursor: pointer;
     }
-
     .export-status { margin-top: 0.75rem; font-size: 0.82rem; }
     .export-status.ok { color: var(--green); }
-    .export-status.err { color: var(--red); }
+    .export-status.err { color: var(--error); }
+
+    /* Paywall modal */
+    .paywall-card {
+      background: var(--surface-2);
+      border: 1px solid rgba(105,241,241,0.2);
+      border-radius: 24px;
+      padding: 2.5rem 2rem;
+      max-width: 420px;
+      width: 100%;
+      text-align: center;
+      box-shadow: 0 0 60px rgba(105,241,241,0.08);
+    }
+    .paywall-lock {
+      width: 64px; height: 64px;
+      border-radius: 18px;
+      background: rgba(105,241,241,0.08);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 1.5rem;
+      border: 1px solid rgba(105,241,241,0.15);
+    }
+    .paywall-lock .material-symbols-outlined {
+      font-size: 2rem;
+      color: var(--primary);
+    }
+    .paywall-card h3 {
+      font-family: var(--font-head);
+      font-size: 1.4rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      margin-bottom: 0.7rem;
+    }
+    .paywall-card p {
+      font-size: 0.88rem;
+      color: var(--muted);
+      line-height: 1.65;
+      margin-bottom: 0.5rem;
+    }
+    .paywall-error-msg {
+      font-size: 0.78rem;
+      color: var(--error);
+      background: rgba(255,113,108,0.08);
+      border: 1px solid rgba(255,113,108,0.15);
+      border-radius: 8px;
+      padding: 0.5rem 0.85rem;
+      margin: 0.8rem 0 1.5rem;
+    }
+    .paywall-plans {
+      display: flex;
+      flex-direction: column;
+      gap: 0.65rem;
+      margin-bottom: 1.5rem;
+    }
+    .paywall-plan {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: var(--surface);
+      border: 1px solid var(--outline);
+      border-radius: 12px;
+      padding: 0.9rem 1.1rem;
+      text-align: left;
+    }
+    .paywall-plan-name {
+      font-family: var(--font-head);
+      font-size: 0.9rem;
+      font-weight: 700;
+    }
+    .paywall-plan-desc {
+      font-size: 0.75rem;
+      color: var(--muted);
+      margin-top: 0.15rem;
+    }
+    .paywall-plan-price {
+      font-family: var(--font-head);
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--primary);
+      white-space: nowrap;
+      margin-left: 1rem;
+    }
+    .paywall-cta {
+      width: 100%;
+      padding: 0.9rem;
+      border-radius: 99px;
+      font-size: 0.95rem;
+      font-family: var(--font-head);
+      margin-bottom: 0.75rem;
+    }
+    .paywall-dismiss {
+      background: transparent;
+      border: none;
+      color: var(--muted);
+      font-size: 0.82rem;
+      cursor: pointer;
+      padding: 0.3rem;
+      transition: color 0.2s;
+    }
+    .paywall-dismiss:hover { color: var(--on-surface); }
 
     /* Spinner */
     .spinner {
       display: inline-block;
       width: 13px; height: 13px;
-      border: 2px solid #fff4;
+      border: 2px solid rgba(255,255,255,0.2);
       border-top-color: currentColor;
       border-radius: 50%;
       animation: spin 0.65s linear infinite;
@@ -489,77 +1155,267 @@
     }
     @keyframes spin { to { transform: rotate(360deg); } }
 
-    /* Suggested prompts */
-    .suggestions {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.5rem;
-      padding: 0 1.25rem 0.75rem;
-    }
-    .suggestion-chip {
-      background: var(--surface2);
-      border: 1px solid var(--border);
-      color: var(--muted);
-      font-size: 0.78rem;
-      padding: 0.35rem 0.8rem;
-      border-radius: 99px;
-      cursor: pointer;
-      transition: border-color 0.15s, color 0.15s;
-    }
-    .suggestion-chip:hover { border-color: var(--accent); color: #a5b4fc; }
-
     @media (max-width: 600px) {
       .msg-row { max-width: 94%; }
-      .use-cases { flex-direction: column; align-items: center; }
+      .hero h1 { font-size: 2.4rem; }
     }
   </style>
 </head>
 <body>
 
-<!-- ═══════════════════════════════════════ LANDING ═══════════════════════════ -->
-<section id="landing">
-  <div class="tag">🔍 WhatsApp · AI · RAG · Groq Llama 3.1</div>
-  <h1>Ask Anything About<br />Your Chats</h1>
-  <p class="subtitle">
-    Upload any WhatsApp export and search it with AI — find old conversations,
-    extract sales data, summarise discussions, and export to Excel in one click.
-  </p>
-  <div class="cta-row">
-    <button class="btn-cta" onclick="showApp()">Start Searching →</button>
-    <button class="btn-ghost" onclick="showDemo()">See Example Queries</button>
-  </div>
+<!-- ══════════════════════════════════════════════════════════════════════════
+     LANDING
+══════════════════════════════════════════════════════════════════════════ -->
+<div id="landing">
 
-  <div class="use-cases">
-    <div class="use-case">
-      <div class="uc-icon">🏪</div>
-      <div class="uc-title">Business Reports</div>
-      <div class="uc-desc">Extract daily sales figures from a manager–owner chat into Excel</div>
-    </div>
-    <div class="use-case">
-      <div class="uc-icon">📅</div>
-      <div class="uc-title">Find Decisions</div>
-      <div class="uc-desc">"When did we agree on the delivery date?" — answered instantly</div>
-    </div>
-    <div class="use-case">
-      <div class="uc-icon">📊</div>
-      <div class="uc-title">Excel Export</div>
-      <div class="uc-desc">Turn chat reports into structured spreadsheets automatically</div>
-    </div>
-    <div class="use-case">
-      <div class="uc-icon">🔒</div>
-      <div class="uc-title">Private</div>
-      <div class="uc-desc">Data lives in your own session — not shared or stored permanently</div>
-    </div>
-  </div>
-</section>
+  <!-- Navbar -->
+  <header class="navbar">
+    <a class="navbar-brand" href="#">
+      <img src="/static/VOLO.png" onerror="this.src='VOLO.png'" alt="Volo AI logo" style="height:40px;" />
+      <span style="font-family:var(--font-head);font-size:1.25rem;font-weight:700;color:#ffffff;letter-spacing:-0.02em;">VOLO AI</span>
+    </a>
+    <ul class="navbar-links">
+      <li><a href="#platform">Platform</a></li>
+      <li><a href="#how">How it works</a></li>
+      <li><a href="#pricing">Pricing</a></li>
+      <li><a href="#contact">Contact</a></li>
+    </ul>
+    <button class="grad-btn navbar-cta" onclick="showApp()">Try Now →</button>
+  </header>
 
-<!-- ═══════════════════════════════════════ APP ═══════════════════════════════ -->
+  <!-- Hero -->
+  <section class="hero">
+    <div class="hero-orb-1"></div>
+    <div class="hero-orb-2"></div>
+    <div class="hero-inner">
+      <h1 class="grad-text reveal">Every deal starts<br />in a chat.<br /><span style="-webkit-text-fill-color: var(--primary); color: var(--primary);">Now search them all.</span></h1>
+      <p class="hero-sub reveal">
+        Upload your WhatsApp export and ask questions in plain English.
+        Find old decisions, extract sales figures, summarise discussions — and export to Excel in one click.
+      </p>
+      <div class="hero-actions reveal">
+        <button class="grad-btn btn-hero-primary" onclick="showApp()">Start for Free →</button>
+        <button class="btn-hero-ghost" onclick="document.getElementById('how').scrollIntoView({behavior:'smooth'})">See how it works</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Platform / "business runs on chat" section -->
+  <section class="platform-section" id="platform">
+    <div class="section-inner">
+      <p class="section-label reveal">Why it matters</p>
+      <h2 class="section-title reveal">Your most important business conversations are buried in chat</h2>
+      <p class="section-sub reveal">
+        Deals are closed, orders are placed, and decisions are made over WhatsApp, Slack, and Teams every day.
+        That knowledge is invisible — until now.
+      </p>
+
+      <div class="platform-cards">
+        <div class="platform-card reveal">
+          <div class="platform-icon" style="background: rgba(37,211,102,0.1);">💬</div>
+          <div class="platform-num">100B+</div>
+          <div class="platform-card-title">WhatsApp messages daily</div>
+          <div class="platform-card-desc">Supplier orders, client confirmations, daily sales reports — all flowing through a single chat thread with no searchable record.</div>
+        </div>
+        <div class="platform-card reveal">
+          <div class="platform-icon" style="background: rgba(74,21,75,0.25);">🟣</div>
+          <div class="platform-num">75%</div>
+          <div class="platform-card-title">Business teams run on messaging apps</div>
+          <div class="platform-card-desc">Slack, Teams, and WhatsApp have replaced email for real-time decisions. But none of them let you query your history with AI.</div>
+        </div>
+        <div class="platform-card reveal">
+          <div class="platform-icon" style="background: rgba(108,189,255,0.1);">⏱</div>
+          <div class="platform-num">5 hrs</div>
+          <div class="platform-card-title">Lost every week per person</div>
+          <div class="platform-card-desc">Scrolling back through months of chat to find a price, a date, a decision. Volo AI answers in seconds with a cited source.</div>
+        </div>
+      </div>
+
+      <!-- Flow diagram -->
+      <div class="flow-row reveal">
+        <div class="flow-step">
+          <span class="flow-step-icon">📦</span>
+          <span class="flow-step-text">WhatsApp .zip export</span>
+        </div>
+        <span class="flow-arrow">→</span>
+        <div class="flow-step">
+          <span class="flow-step-icon">⚡</span>
+          <span class="flow-step-text">Volo AI indexes it</span>
+        </div>
+        <span class="flow-arrow">→</span>
+        <div class="flow-step">
+          <span class="flow-step-icon">🔍</span>
+          <span class="flow-step-text">Ask in plain English</span>
+        </div>
+        <span class="flow-arrow">→</span>
+        <div class="flow-step">
+          <span class="flow-step-icon">✅</span>
+          <span class="flow-step-text">Answers with cited sources</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- How it works -->
+  <section class="how-section" id="how">
+    <div class="section-inner">
+      <p class="section-label reveal">How it works</p>
+      <h2 class="section-title reveal">From chat export to answers in seconds</h2>
+      <p class="section-sub reveal">No setup, no integrations, no data leaving your session. Just upload and ask.</p>
+
+      <div class="steps-grid">
+        <div class="step-card reveal">
+          <div class="step-num">1</div>
+          <div class="step-title">Upload your export</div>
+          <div class="step-desc">Drop your WhatsApp <strong>.zip</strong> or <strong>.txt</strong> export, a PDF transcript, or any text file. Volo AI accepts them all in one click.</div>
+        </div>
+        <div class="step-card reveal">
+          <div class="step-num">2</div>
+          <div class="step-title">We index and embed it</div>
+          <div class="step-desc">Messages are parsed, chunked into semantic windows, and embedded into a private vector store. Your data stays in your session — not shared, not stored permanently.</div>
+        </div>
+        <div class="step-card reveal">
+          <div class="step-num">3</div>
+          <div class="step-title">Ask anything</div>
+          <div class="step-desc">Query in plain English. Get instant answers powered by Groq Llama 3.1 with cited source messages. Export structured data to Excel in one click.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Pricing -->
+  <section class="pricing-section" id="pricing">
+    <div class="section-inner">
+      <p class="section-label reveal" style="text-align:center">Pricing</p>
+      <h2 class="section-title reveal" style="text-align:center; max-width:100%">Start free. Scale when you're ready.</h2>
+      <p class="section-sub reveal" style="text-align:center; margin: 0 auto 3.5rem;">No credit card required to try. Upgrade when you need more power.</p>
+
+      <div class="pricing-grid">
+
+        <!-- Free -->
+        <div class="pricing-card reveal">
+          <div class="pricing-tier">Starter</div>
+          <div class="pricing-price">$0<span>/mo</span></div>
+          <div class="pricing-tagline">For individuals trying it out</div>
+          <div class="pricing-divider"></div>
+          <ul class="pricing-features">
+            <li><span class="material-symbols-outlined">check_circle</span>1 active chat session</li>
+            <li><span class="material-symbols-outlined">check_circle</span>Upload up to 5 MB</li>
+            <li><span class="material-symbols-outlined">check_circle</span>WhatsApp .zip &amp; .txt support</li>
+            <li><span class="material-symbols-outlined">check_circle</span>50 AI queries / month</li>
+            <li><span class="material-symbols-outlined">check_circle</span>Excel export</li>
+            <li><span class="material-symbols-outlined">check_circle</span>Community support</li>
+          </ul>
+          <button class="pricing-cta pricing-cta-ghost" onclick="showApp()">Get Started Free</button>
+        </div>
+
+        <!-- Pro -->
+        <div class="pricing-card featured reveal">
+          <div class="pricing-badge">Most Popular</div>
+          <div class="pricing-tier">Pro</div>
+          <div class="pricing-price">$29<span>/mo</span></div>
+          <div class="pricing-tagline">For freelancers and small teams</div>
+          <div class="pricing-divider"></div>
+          <ul class="pricing-features">
+            <li><span class="material-symbols-outlined">check_circle</span>Unlimited sessions</li>
+            <li><span class="material-symbols-outlined">check_circle</span>Upload up to 500 MB</li>
+            <li><span class="material-symbols-outlined">check_circle</span>WhatsApp, Slack &amp; Teams exports</li>
+            <li><span class="material-symbols-outlined">check_circle</span>2,000 AI queries / month</li>
+            <li><span class="material-symbols-outlined">check_circle</span>PDF &amp; multi-file ingestion</li>
+            <li><span class="material-symbols-outlined">check_circle</span>Extended chat history</li>
+            <li><span class="material-symbols-outlined">check_circle</span>Priority support</li>
+          </ul>
+          <button class="pricing-cta grad-btn">Upgrade to Pro</button>
+        </div>
+
+        <!-- Business -->
+        <div class="pricing-card reveal">
+          <div class="pricing-tier">Business</div>
+          <div class="pricing-price" style="font-size:2.2rem">Custom</div>
+          <div class="pricing-tagline">For teams and enterprises</div>
+          <div class="pricing-divider"></div>
+          <ul class="pricing-features">
+            <li><span class="material-symbols-outlined">check_circle</span>Everything in Pro</li>
+            <li><span class="material-symbols-outlined">check_circle</span>Private cloud deployment</li>
+            <li><span class="material-symbols-outlined">check_circle</span>Advanced security &amp; encryption</li>
+            <li><span class="material-symbols-outlined">check_circle</span>Salesforce &amp; HubSpot integration</li>
+            <li><span class="material-symbols-outlined">check_circle</span>Slack &amp; Teams native connector</li>
+            <li><span class="material-symbols-outlined">check_circle</span>Configurable storage</li>
+            <li><span class="material-symbols-outlined">check_circle</span>SSO / SAML · SLA · Dedicated support</li>
+          </ul>
+          <button class="pricing-cta pricing-cta-ghost">Contact Sales</button>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- Contact Sales -->
+  <section class="contact-section" id="contact">
+    <div class="section-inner" style="max-width:680px; text-align:center; margin:0 auto;">
+      <p class="section-label reveal">Contact Sales</p>
+      <h2 class="section-title reveal" style="max-width:100%">Let's talk about your team's needs</h2>
+      <p class="section-sub reveal" style="margin:0 auto 3rem;">Interested in private cloud, CRM integrations, or enterprise security? Fill in the form and we'll be in touch within one business day.</p>
+
+      <form id="contactForm" class="contact-form reveal" action="/contact" method="POST">
+        <div class="contact-row">
+          <div class="contact-field">
+            <label class="contact-label">Your name</label>
+            <input type="text" name="name" class="contact-input" placeholder="Jane Smith" required />
+          </div>
+          <div class="contact-field">
+            <label class="contact-label">Work email</label>
+            <input type="email" name="email" class="contact-input" placeholder="jane@company.com" required />
+          </div>
+        </div>
+        <div class="contact-field">
+          <label class="contact-label">Company</label>
+          <input type="text" name="company" class="contact-input" placeholder="Acme Corp" />
+        </div>
+        <div class="contact-field">
+          <label class="contact-label">What are you looking for?</label>
+          <textarea name="message" class="contact-textarea" rows="4" placeholder="Tell us about your team size, data sources, and what you'd like to achieve…" required></textarea>
+        </div>
+        <div id="contactStatus" class="contact-status"></div>
+        <button type="submit" class="grad-btn contact-submit">Send Message →</button>
+      </form>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="footer-inner">
+      <div>
+        <div class="footer-brand">
+          <img src="/static/VOLO.png" onerror="this.src='VOLO.png'" alt="Volo AI logo" style="height:32px;" />
+          <span style="font-family:var(--font-head);font-size:1.1rem;font-weight:700;color:#ffffff;letter-spacing:-0.02em;">VOLO AI</span>
+        </div>
+        <div class="footer-copy">© 2026 Volo AI. All rights reserved.</div>
+      </div>
+      <nav class="footer-links">
+        <a href="#platform">Platform</a>
+        <a href="#how">How it works</a>
+        <a href="#pricing">Pricing</a>
+        <a href="#">Privacy Policy</a>
+        <a href="#">Terms</a>
+      </nav>
+    </div>
+  </footer>
+
+</div><!-- /landing -->
+
+
+<!-- ══════════════════════════════════════════════════════════════════════════
+     APP SHELL
+══════════════════════════════════════════════════════════════════════════ -->
 <section id="app">
 
   <!-- Top bar -->
   <div class="topbar">
     <div class="topbar-left">
-      <div class="topbar-logo">ChatSearch</div>
+      <a class="topbar-brand" href="#" onclick="showLanding(); return false;">
+        <img src="/static/VOLO.png" onerror="this.src='VOLO.png'" alt="logo" style="height:30px;" />
+      </a>
       <div class="topbar-file" id="topbarFile">No file loaded</div>
     </div>
     <div class="topbar-right">
@@ -574,18 +1430,20 @@
   <div id="upload-panel">
     <div class="upload-card">
       <h2>Upload Your Chat Export</h2>
-      <p>Export your WhatsApp chat as a <strong>.txt</strong> file and upload it below.<br />
-         <em>WhatsApp → Chat → ⋮ → More → Export Chat → Without Media</em></p>
+      <p>
+        Export your WhatsApp chat as a <strong>.zip</strong> or <strong>.txt</strong> file and upload it below.<br />
+        <em style="font-size:0.8rem;color:var(--muted)">WhatsApp → Chat → ⋮ → More → Export Chat → Without Media</em>
+      </p>
 
       <div class="drop-zone" id="dropZone" onclick="document.getElementById('fileInput').click()"
            ondragover="onDragOver(event)" ondragleave="onDragLeave(event)" ondrop="onDrop(event)">
         <div class="dz-icon">📄</div>
-        <div class="dz-label">Click to select or drag & drop a .txt file</div>
+        <div class="dz-label">Click to select or drag &amp; drop a .zip, .txt, or .pdf file</div>
         <div class="dz-filename" id="dzFilename"></div>
-        <input type="file" id="fileInput" accept=".txt,.pdf" onchange="onFileSelect(event)" />
+        <input type="file" id="fileInput" accept=".txt,.pdf,.zip" onchange="onFileSelect(event)" />
       </div>
 
-      <button class="btn-upload" id="uploadBtn" onclick="uploadFile()" disabled>Upload & Index Chat</button>
+      <button class="btn-upload" id="uploadBtn" onclick="uploadFile()" disabled>Upload &amp; Index Chat</button>
       <div class="upload-status info" id="uploadStatus"></div>
       <div class="stat-grid" id="statGrid" style="display:none"></div>
     </div>
@@ -605,8 +1463,11 @@
 
 </section>
 
-<!-- ═══════════════════════════════════════ EXPORT MODAL ═════════════════════ -->
-<div id="export-panel">
+
+<!-- ══════════════════════════════════════════════════════════════════════════
+     EXPORT MODAL
+══════════════════════════════════════════════════════════════════════════ -->
+<div class="modal-overlay" id="export-panel">
   <div class="export-card">
     <h3>⬇ Export to Excel</h3>
     <p>Describe what structured data to extract from the chat — e.g. daily sales, order numbers, customer names.</p>
@@ -619,8 +1480,43 @@
   </div>
 </div>
 
+
+<!-- ══════════════════════════════════════════════════════════════════════════
+     PAYWALL MODAL
+══════════════════════════════════════════════════════════════════════════ -->
+<div class="modal-overlay" id="paywall-panel">
+  <div class="paywall-card">
+    <div class="paywall-lock">
+      <span class="material-symbols-outlined">lock</span>
+    </div>
+    <h3>Upgrade to continue</h3>
+    <p>You've hit a limit on the free plan. Upgrade to keep querying your chats without interruption.</p>
+    <div class="paywall-error-msg" id="paywallErrorMsg"></div>
+    <div class="paywall-plans">
+      <div class="paywall-plan">
+        <div>
+          <div class="paywall-plan-name">Pro</div>
+          <div class="paywall-plan-desc">2,000 queries/mo · 500 MB · Unlimited sessions</div>
+        </div>
+        <div class="paywall-plan-price">$29/mo</div>
+      </div>
+      <div class="paywall-plan">
+        <div>
+          <div class="paywall-plan-name">Business</div>
+          <div class="paywall-plan-desc">Unlimited · Private cloud · CRM integrations</div>
+        </div>
+        <div class="paywall-plan-price">Custom</div>
+      </div>
+    </div>
+    <button class="paywall-cta grad-btn" onclick="closePaywall(); document.getElementById('pricing').scrollIntoView({behavior:'smooth'}); showLanding();">View Plans</button>
+    <br/>
+    <button class="paywall-dismiss" onclick="closePaywall()">Maybe later</button>
+  </div>
+</div>
+
+
 <script>
-  const API = "";  // same-origin; change to full URL if deployed separately
+  const API = "";
 
   // ── State ────────────────────────────────────────────────────────────────────
   let sessionId = null;
@@ -628,12 +1524,12 @@
 
   // ── View helpers ─────────────────────────────────────────────────────────────
   function showLanding() {
-    document.getElementById("landing").style.display = "flex";
+    document.getElementById("landing").classList.remove("hidden");
     document.getElementById("app").style.display = "none";
   }
 
   function showApp() {
-    document.getElementById("landing").style.display = "none";
+    document.getElementById("landing").classList.add("hidden");
     document.getElementById("app").style.display = "flex";
   }
 
@@ -650,15 +1546,19 @@
     scrollToBottom();
   }
 
-  function showDemo() {
-    showApp();
-    // Pre-populate the suggestions
-    showUploadPanel();
-  }
-
   function scrollToBottom() {
     const el = document.getElementById("messages");
     setTimeout(() => { el.scrollTop = el.scrollHeight; }, 50);
+  }
+
+  // ── Paywall modal ─────────────────────────────────────────────────────────────
+  function showPaywall(errorMsg) {
+    document.getElementById("paywallErrorMsg").textContent = errorMsg || "An error occurred. Please upgrade to continue.";
+    document.getElementById("paywall-panel").classList.add("visible");
+  }
+
+  function closePaywall() {
+    document.getElementById("paywall-panel").classList.remove("visible");
   }
 
   // ── File drag & drop ─────────────────────────────────────────────────────────
@@ -715,21 +1615,18 @@
 
       document.getElementById("topbarFile").textContent = selectedFile.name;
 
-      // Show stats
       const s = data.stats || {};
-      const senders = s.senders ? Object.entries(s.senders)
-        .sort((a, b) => b[1] - a[1])
-        .map(([name, count]) => `${name} (${count})`)
-        .join(", ") : "—";
+      const senders = s.senders
+        ? Object.entries(s.senders).sort((a, b) => b[1] - a[1]).map(([n, c]) => `${n} (${c})`).join(", ")
+        : "—";
 
       statGrid.innerHTML = `
         <div class="stat-item"><div class="stat-label">Messages</div><div class="stat-value">${s.total_messages || "—"}</div></div>
         <div class="stat-item"><div class="stat-label">Date range</div><div class="stat-value">${s.date_range_start || "—"} – ${s.date_range_end || "—"}</div></div>
-        <div class="stat-item" style="grid-column:1/-1"><div class="stat-label">Participants</div><div class="stat-value" style="font-size:0.78rem;color:#aaa">${senders}</div></div>
+        <div class="stat-item" style="grid-column:1/-1"><div class="stat-label">Participants</div><div class="stat-value" style="font-size:0.78rem;color:var(--muted)">${senders}</div></div>
       `;
       statGrid.style.display = "grid";
 
-      // Switch to chat after short delay
       setTimeout(() => {
         clearMessages();
         addWelcomeMessage(data.stats);
@@ -738,8 +1635,7 @@
       }, 1000);
 
     } catch (err) {
-      status.textContent = "✗ " + err.message;
-      status.className = "upload-status err";
+      showPaywall(err.message);
     } finally {
       btn.disabled = false;
       btn.textContent = "Upload & Index Chat";
@@ -787,7 +1683,7 @@
 
     const label = document.createElement("div");
     label.className = "msg-label";
-    label.textContent = role === "user" ? "You" : "ChatSearch";
+    label.textContent = role === "user" ? "You" : "Volo AI";
 
     const bubble = document.createElement("div");
     bubble.className = "bubble";
@@ -810,9 +1706,7 @@
       sources.forEach(s => {
         const card = document.createElement("div");
         card.className = "source-card";
-        const dateRange = s.date_start === s.date_end
-          ? s.date_start
-          : `${s.date_start} → ${s.date_end}`;
+        const dateRange = s.date_start === s.date_end ? s.date_start : `${s.date_start} → ${s.date_end}`;
         card.innerHTML = `<div class="source-meta">📅 ${dateRange} · 👤 ${s.sender}</div>` +
           `<div class="source-snippet">${s.snippet.substring(0, 280)}${s.snippet.length > 280 ? "…" : ""}</div>`;
         list.appendChild(card);
@@ -832,15 +1726,12 @@
     const row = document.createElement("div");
     row.className = "msg-row ai";
     row.id = "typing-indicator";
-
     const label = document.createElement("div");
     label.className = "msg-label";
-    label.textContent = "ChatSearch";
-
+    label.textContent = "Volo AI";
     const indicator = document.createElement("div");
     indicator.className = "bubble typing";
     indicator.innerHTML = "<span></span><span></span><span></span>";
-
     row.appendChild(label);
     row.appendChild(indicator);
     container.appendChild(row);
@@ -865,8 +1756,6 @@
 
     appendMessage("user", text, []);
     addTypingIndicator();
-
-    // Hide suggestions after first message
     document.getElementById("suggestionsBar").style.display = "none";
 
     try {
@@ -881,7 +1770,7 @@
       appendMessage("ai", data.answer, data.sources || []);
     } catch (err) {
       removeTypingIndicator();
-      appendMessage("ai", `Error: ${err.message}`, []);
+      showPaywall(err.message);
     } finally {
       sendBtn.disabled = false;
       input.focus();
@@ -944,16 +1833,17 @@
       status.className = "export-status ok";
       setTimeout(closeExport, 1500);
     } catch (err) {
-      status.textContent = "✗ " + err.message;
-      status.className = "export-status err";
+      closeExport();
+      showPaywall(err.message);
     } finally {
       btn.disabled = false;
       btn.textContent = "Generate Excel";
     }
   }
 
-  // ── Auto-grow textarea ───────────────────────────────────────────────────────
+  // ── Scroll-reveal ────────────────────────────────────────────────────────────
   document.addEventListener("DOMContentLoaded", () => {
+    // Auto-grow textarea
     const input = document.getElementById("msgInput");
     input.addEventListener("input", () => {
       input.style.height = "auto";
@@ -966,10 +1856,60 @@
       }
     });
 
-    // Close export modal on backdrop click
+    // Close modals on backdrop click
     document.getElementById("export-panel").addEventListener("click", (e) => {
       if (e.target === document.getElementById("export-panel")) closeExport();
     });
+    document.getElementById("paywall-panel").addEventListener("click", (e) => {
+      if (e.target === document.getElementById("paywall-panel")) closePaywall();
+    });
+
+    // Intersection Observer for scroll-reveal
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add("visible");
+          observer.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.12 });
+
+    document.querySelectorAll(".reveal").forEach(el => observer.observe(el));
+
+    // Contact form — AJAX submit to contact.php
+    const contactForm = document.getElementById("contactForm");
+    if (contactForm) {
+      contactForm.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const status = document.getElementById("contactStatus");
+        const btn = contactForm.querySelector(".contact-submit");
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner"></span>Sending…';
+        status.textContent = "";
+        status.className = "contact-status";
+
+        try {
+          const res = await fetch("/contact", {
+            method: "POST",
+            body: new FormData(contactForm),
+          });
+          const text = await res.text();
+          if (res.ok && text.trim() === "ok") {
+            status.textContent = "✓ Message sent! We'll be in touch within one business day.";
+            status.className = "contact-status ok";
+            contactForm.reset();
+          } else {
+            throw new Error(text || "Something went wrong. Please try again.");
+          }
+        } catch (err) {
+          status.textContent = "✗ " + err.message;
+          status.className = "contact-status err";
+        } finally {
+          btn.disabled = false;
+          btn.textContent = "Send Message →";
+        }
+      });
+    }
   });
 </script>
 </body>

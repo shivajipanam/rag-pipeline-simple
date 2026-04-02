@@ -11,7 +11,9 @@ Also handles:
   - Media placeholders: "<Media omitted>", "image omitted", "video omitted", etc.
   - Zero-width / special Unicode characters WhatsApp inserts
 """
+import io
 import re
+import zipfile
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Optional
@@ -53,6 +55,29 @@ class ChatMessage:
     text: str
     is_media: bool = False
     parsed_dt: Optional[datetime] = None
+
+
+def preprocess_zip(zip_bytes: bytes) -> tuple[bytes, str]:
+    """
+    Extract a WhatsApp chat .txt file from a zip archive.
+
+    WhatsApp exports are zip files containing a single .txt chat file
+    (and optionally media files which are ignored here).
+
+    Returns:
+        (txt_bytes, filename) — the raw bytes of the .txt file and its name.
+
+    Raises:
+        ValueError if the zip contains no .txt file.
+    """
+    with zipfile.ZipFile(io.BytesIO(zip_bytes)) as zf:
+        txt_names = [name for name in zf.namelist() if name.lower().endswith(".txt")]
+        if not txt_names:
+            raise ValueError("No .txt file found inside the ZIP. Please export the WhatsApp chat as a .txt file.")
+        # Pick the first .txt (WhatsApp exports contain exactly one)
+        txt_name = txt_names[0]
+        txt_bytes = zf.read(txt_name)
+    return txt_bytes, txt_name
 
 
 def _clean(text: str) -> str:
