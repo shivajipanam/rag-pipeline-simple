@@ -22,6 +22,8 @@ pids
 *.pid
 *.seed
 *.pid.lock
+docs/Whatsapp*
+frontend/stitch*
 
 # Python
 __pycache__/
